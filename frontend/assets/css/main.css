@@ -1,0 +1,39 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── CSS variables used by canvas drawing (JS can't access Tailwind classes) ─ */
+:root {
+  --green-deep:  #15803d;
+  --green-vivid: #22c55e;
+  --green-lime:  #4ade80;
+  --green-pale:  #bbf7d0;
+  --ink:         #0a0f0a;
+  --ink-faint:   #6B8F72;
+  --bg:          #FAFFF9;
+  --bg-card:     #F0FBF4;
+  --border:      #D1FAE5;
+}
+
+/* ── Base ──────────────────────────────────────────────────────────────────── */
+html, body {
+  background-color: #FAFFF9;
+  color: #0a0f0a;
+  font-family: 'Syne', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #F0FBF4; }
+::-webkit-scrollbar-thumb { background: #bbf7d0; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #16a34a; }
+
+/* ── Focus ring ────────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid #22c55e;
+  outline-offset: 2px;
+  border-radius: 8px;
+}
