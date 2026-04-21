@@ -82,7 +82,7 @@ async function onFile(file: File) {
 }
 
 watch(() => store.jobStatus, (status) => {
-  if (status === 'complete') router.push(`/karaoke?job=${store.jobId}`)
+  if (status === 'complete') router.push(`/vocal-range?job=${store.jobId}`)
 })
 
 function formatBytes(bytes: number): string {

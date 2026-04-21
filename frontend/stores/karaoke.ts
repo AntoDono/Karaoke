@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { NoteEvent, AnalysisResult, JobStatus, ActiveNote } from '~/types'
+import type { NoteEvent, AnalysisResult, JobStatus, ActiveNote, VocalRange } from '~/types'
 
 export const useKaraokeStore = defineStore('karaoke', () => {
   // ── Job state ───────────────────────────────────────────────────────────────
@@ -28,6 +28,10 @@ export const useKaraokeStore = defineStore('karaoke', () => {
   const liveMidi = ref(0)         // quantised MIDI note
   const liveNoteName = ref('')    // e.g. "C4"
   const isMicActive = ref(false)
+
+  // ── Transpose & vocal range ──────────────────────────────────────────────────
+  const transpose  = ref(0)                          // semitones; positive = up
+  const vocalRange = ref<VocalRange | null>(null)
 
   // ── Score ────────────────────────────────────────────────────────────────────
   const score = ref(0)             // 0–100
@@ -90,6 +94,16 @@ export const useKaraokeStore = defineStore('karaoke', () => {
     }
   }
 
+  function setTranspose(octaves: number) {
+    // Transpose is octave-only — snap to nearest multiple of 12, clamped ±2 octaves
+    const snapped = Math.round(octaves / 12) * 12
+    transpose.value = Math.max(-24, Math.min(24, snapped))
+  }
+
+  function setVocalRange(range: VocalRange) {
+    vocalRange.value = range
+  }
+
   function recordPitchSample(isCorrect: boolean) {
     scoredFrames.value++
     if (isCorrect) correctFrames.value++
@@ -113,6 +127,8 @@ export const useKaraokeStore = defineStore('karaoke', () => {
     score.value = 0
     scoredFrames.value = 0
     correctFrames.value = 0
+    transpose.value = 0
+    vocalRange.value = null
     if (audioUrl.value) {
       URL.revokeObjectURL(audioUrl.value)
       audioUrl.value = null
@@ -129,12 +145,14 @@ export const useKaraokeStore = defineStore('karaoke', () => {
     currentTime, isPlaying,
     liveF0, liveMidi, liveNoteName, isMicActive,
     score, scoredFrames, correctFrames,
+    transpose, vocalRange,
     // computed
     activeNote,
     // actions
     setJob, updateJobStatus,
     setAudioFile, setCurrentTime, setPlaying,
     setLivePitch, setMicActive, recordPitchSample,
+    setTranspose, setVocalRange,
     resetSession,
   }
 })

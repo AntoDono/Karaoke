@@ -42,3 +42,10 @@ export interface ActiveNote {
   /** Progress through the note: 0 = start, 1 = end */
   progress: number
 }
+
+export interface VocalRange {
+  minMidi: number
+  maxMidi: number
+  minNote: string
+  maxNote: string
+}

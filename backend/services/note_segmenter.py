@@ -11,7 +11,7 @@ from models.schemas import NoteEvent
 
 
 # Minimum duration for a note event to be included (filters out transient pops)
-MIN_NOTE_DURATION_SEC = 0.15
+MIN_NOTE_DURATION_SEC = 0.25
 
 # Same-note events separated by less than this are merged into one long note
 MERGE_GAP_SEC = 0.25

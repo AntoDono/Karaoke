@@ -20,19 +20,23 @@ let canvasH = 0
 
 const PIANO_WIDTH  = 52
 const VISIBLE_SECS = 10
-const CURSOR_X_PCT = 0.3
+const CURSOR_X_PCT = 0
 const ROW_PADDING  = 2  // semitone padding above/below note range
 
-// ── Dynamic MIDI range from actual note events ───────────────────────────────
+// ── Dynamic MIDI range from actual note events (shifted by transpose) ─────────
 const midiRange = computed(() => {
   const notes = store.noteEvents
-  if (!notes.length) return { min: 48, max: 72 }   // C3–C5 default
-  let min = notes[0].midi, max = notes[0].midi
+  const t = store.transpose
+  if (!notes.length) return { min: 48 + t, max: 72 + t }   // C3–C5 default
+  let min = notes[0]!.midi, max = notes[0]!.midi
   for (const n of notes) {
     if (n.midi < min) min = n.midi
     if (n.midi > max) max = n.midi
   }
-  return { min: Math.max(0, min - ROW_PADDING), max: Math.min(127, max + ROW_PADDING) }
+  return {
+    min: Math.max(0, min + t - ROW_PADDING),
+    max: Math.min(127, max + t + ROW_PADDING),
+  }
 })
 
 // rowHeight computed per-draw from canvas height so every note fits on screen
@@ -86,8 +90,7 @@ function draw() {
   const rowH = getRowHeight()
 
   const pxPerSec = (W - PIANO_WIDTH) / VISIBLE_SECS
-  const cursorX  = PIANO_WIDTH + (W - PIANO_WIDTH) * CURSOR_X_PCT
-  const timeLeft = t - (cursorX - PIANO_WIDTH) / pxPerSec
+  const timeLeft = t
   const { min: MIDI_MIN, max: MIDI_MAX } = midiRange.value
 
   ctx.clearRect(0, 0, W, H)
@@ -142,29 +145,48 @@ function draw() {
 
   // ── Note bars (only visible window) ──────────────────────────────────────────
   const timeRight = timeLeft + VISIBLE_SECS
+  const tp = store.transpose
   for (const note of store.noteEvents) {
     if (note.end < timeLeft || note.start > timeRight) continue
 
+    const shiftedMidi = Math.max(0, Math.min(127, note.midi + tp))
     const x1     = PIANO_WIDTH + (note.start - timeLeft) * pxPerSec
     const x2     = PIANO_WIDTH + (note.end   - timeLeft) * pxPerSec
-    const y      = midiToY(note.midi, rowH)
+    const y      = midiToY(shiftedMidi, rowH)
     const w      = Math.max(x2 - x1, 2)
     const active = t >= note.start && t <= note.end
 
-    drawNoteBar(x1, y, w, rowH, note, active)
+    drawNoteBar(x1, y, w, rowH, note, active, tp)
   }
 
   // ── Piano keys ────────────────────────────────────────────────────────────────
-  drawPianoKeys(rowH, MIDI_MIN, MIDI_MAX)
+  drawPianoKeys(rowH, MIDI_MIN, MIDI_MAX, tp)
 
-  // ── Playhead ──────────────────────────────────────────────────────────────────
-  drawCursor(cursorX)
+  // ── Tolerance bands (±1 semitone) around the active note ─────────────────────
+  if (store.activeNote) {
+    drawToleranceBands(store.activeNote.event.midi + tp, rowH, W)
+  }
+
+  // ── Live pitch arrow ──────────────────────────────────────────────────────────
+  if (store.isMicActive && store.liveMidi > 0) {
+    drawPitchArrow(store.liveMidi, rowH)
+  }
+
+  // ── Playhead at left edge of note area ────────────────────────────────────────
+  drawPlayhead()
+}
+
+const NOTE_NAMES_TIMELINE = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+function shiftedNoteName(midi: number): string {
+  const clamped = Math.max(0, Math.min(127, midi))
+  const octave  = Math.floor(clamped / 12) - 1
+  return `${NOTE_NAMES_TIMELINE[clamped % 12]}${octave}`
 }
 
 // ── Note bar — NO shadowBlur (too expensive), use brighter colour for active ──
 function drawNoteBar(
   x: number, y: number, w: number, h: number,
-  note: NoteEvent, active: boolean,
+  note: NoteEvent, active: boolean, transpose: number = 0,
 ) {
   if (!ctx) return
   const r = Math.min(h / 2, 4)
@@ -183,16 +205,17 @@ function drawNoteBar(
   roundRect(x + 1, y + 1, w - 2, h - 2, r)
   ctx.fill()
 
-  // Label
+  // Label — show transposed note name when transpose is active
   if (w > 28) {
+    const label = transpose !== 0 ? shiftedNoteName(note.midi + transpose) : note.note
     ctx.fillStyle = active ? C.ink : 'rgba(255,255,255,0.9)'
     ctx.font      = `${active ? '600' : '500'} 9px "IBM Plex Mono", monospace`
     ctx.textAlign = 'left'
-    ctx.fillText(note.note, x + 4, y + h - 3)
+    ctx.fillText(label, x + 4, y + h - 3)
   }
 }
 
-function drawPianoKeys(rowH: number, midiMin: number, midiMax: number) {
+function drawPianoKeys(rowH: number, midiMin: number, midiMax: number, transpose: number = 0) {
   if (!ctx) return
   ctx.fillStyle = C.bgCard
   ctx.fillRect(0, 0, PIANO_WIDTH, canvasH)
@@ -210,6 +233,7 @@ function drawPianoKeys(rowH: number, midiMin: number, midiMax: number) {
   for (let midi = midiMin; midi <= midiMax; midi++) {
     const y       = midiToY(midi, rowH)
     const isBlack = [1,3,6,8,10].includes(midi % 12)
+    // For C labels, determine actual pitch accounting for transpose
     const isC     = midi % 12 === 0
 
     ctx.fillStyle = isBlack ? '#2a3a2a' : 'white'
@@ -220,18 +244,59 @@ function drawPianoKeys(rowH: number, midiMin: number, midiMax: number) {
       ctx.fillText(`C${Math.floor(midi / 12) - 1}`, PIANO_WIDTH - 2, y + rowH - 2)
     }
   }
+
+  // Transpose indicator badge at top of piano strip
+  if (transpose !== 0) {
+    const label = `${transpose > 0 ? '+' : ''}${transpose}`
+    ctx.fillStyle = transpose > 0 ? '#15803d' : '#b45309'
+    ctx.fillRect(2, 2, PIANO_WIDTH - 4, 14)
+    ctx.fillStyle = 'white'
+    ctx.font      = '700 8px "IBM Plex Mono", monospace'
+    ctx.textAlign = 'center'
+    ctx.fillText(label, PIANO_WIDTH / 2, 12)
+    ctx.textAlign = 'right'
+  }
 }
 
-function drawCursor(x: number) {
+function drawToleranceBands(activeMidi: number, rowH: number, W: number) {
   if (!ctx) return
+
+  // Top edge of the note one semitone above (+1): bottom of that row
+  const yAbove = midiToY(activeMidi + 1, rowH) + rowH
+  // Bottom edge of the note one semitone below (-1): top of that row
+  const yBelow = midiToY(activeMidi - 1, rowH)
+
+  ctx.save()
+  ctx.strokeStyle = 'rgba(251, 146, 60, 0.85)'  // orange-400 @ 85%
+  ctx.lineWidth   = 1.5
+  ctx.setLineDash([5, 3])
+
+  // Upper bound
+  ctx.beginPath()
+  ctx.moveTo(PIANO_WIDTH, yAbove)
+  ctx.lineTo(W, yAbove)
+  ctx.stroke()
+
+  // Lower bound
+  ctx.beginPath()
+  ctx.moveTo(PIANO_WIDTH, yBelow)
+  ctx.lineTo(W, yBelow)
+  ctx.stroke()
+
+  ctx.restore()
+}
+
+function drawPlayhead() {
+  if (!ctx) return
+  const x = PIANO_WIDTH
   const grad = ctx.createLinearGradient(0, 0, 0, canvasH)
   grad.addColorStop(0,   'rgba(74,222,128,0)')
-  grad.addColorStop(0.2, 'rgba(74,222,128,0.2)')
-  grad.addColorStop(0.5, 'rgba(74,222,128,0.45)')
-  grad.addColorStop(0.8, 'rgba(74,222,128,0.2)')
+  grad.addColorStop(0.2, 'rgba(74,222,128,0.15)')
+  grad.addColorStop(0.5, 'rgba(74,222,128,0.35)')
+  grad.addColorStop(0.8, 'rgba(74,222,128,0.15)')
   grad.addColorStop(1,   'rgba(74,222,128,0)')
   ctx.fillStyle = grad
-  ctx.fillRect(x - 6, 0, 12, canvasH)
+  ctx.fillRect(x, 0, 6, canvasH)
 
   ctx.beginPath()
   ctx.strokeStyle = C.greenLime
@@ -240,6 +305,55 @@ function drawCursor(x: number) {
   ctx.lineTo(x, canvasH)
   ctx.stroke()
 }
+
+/**
+ * Right-pointing arrow on the piano-strip edge that tracks the live sung pitch.
+ * The arrow body sits inside the piano strip; the tip pokes just past the
+ * border into the note area so it's clearly visible against both backgrounds.
+ */
+function drawPitchArrow(liveMidi: number, rowH: number) {
+  if (!ctx) return
+
+  const noteCentre = midiToY(liveMidi, rowH) + rowH / 2
+  const tipX   = PIANO_WIDTH + 10   // tip of the arrow (into note area)
+  const tailX  = PIANO_WIDTH - 22   // back of the arrow body
+  const halfH  = Math.max(5, Math.min(10, rowH * 0.55))  // scales with row height
+
+  // Determine if singer is hitting the active note
+  const active     = store.activeNote
+  const isOnTarget = active && (active.event.midi + store.transpose === liveMidi)
+  const arrowColor = isOnTarget ? C.greenLime : '#facc15'  // green = correct, yellow = off
+
+  // Glow halo behind the arrow
+  const glow = ctx.createRadialGradient(PIANO_WIDTH, noteCentre, 0, PIANO_WIDTH, noteCentre, 24)
+  glow.addColorStop(0,   isOnTarget ? 'rgba(74,222,128,0.35)' : 'rgba(250,204,21,0.3)')
+  glow.addColorStop(1,   'rgba(0,0,0,0)')
+  ctx.fillStyle = glow
+  ctx.fillRect(tailX - 4, noteCentre - 24, tipX - tailX + 28, 48)
+
+  // Arrow shape: a right-pointing chevron/arrowhead
+  ctx.beginPath()
+  ctx.moveTo(tailX,  noteCentre - halfH)  // top-left
+  ctx.lineTo(tipX - halfH * 0.9, noteCentre - halfH) // top-right shoulder
+  ctx.lineTo(tipX,   noteCentre)           // tip
+  ctx.lineTo(tipX - halfH * 0.9, noteCentre + halfH) // bottom-right shoulder
+  ctx.lineTo(tailX,  noteCentre + halfH)  // bottom-left
+  ctx.closePath()
+  ctx.fillStyle = arrowColor
+  ctx.fill()
+
+  // Note label inside the arrow body (only if rows are tall enough)
+  if (rowH >= 10) {
+    const NOTE_NAMES_ARR = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']
+    const name = `${NOTE_NAMES_ARR[liveMidi % 12]}${Math.floor(liveMidi / 12) - 1}`
+    ctx.fillStyle = isOnTarget ? C.ink : '#713f12'
+    ctx.font      = `700 ${Math.max(7, Math.min(9, rowH * 0.55)).toFixed(0)}px "IBM Plex Mono", monospace`
+    ctx.textAlign = 'left'
+    ctx.fillText(name, tailX + 2, noteCentre + 3)
+    ctx.textAlign = 'right'
+  }
+}
+
 
 function roundRect(x: number, y: number, w: number, h: number, r: number) {
   if (!ctx) return

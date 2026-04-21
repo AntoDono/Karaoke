@@ -31,6 +31,29 @@
         </span>
       </div>
 
+      <!-- Transpose control — octave steps only -->
+      <div class="flex items-center gap-1 shrink-0 bg-green-50 border border-green-200 rounded-lg px-1 py-1">
+        <button
+          class="w-6 h-6 flex items-center justify-center rounded font-mono text-sm text-green-700 hover:bg-green-200 transition-colors leading-none disabled:opacity-30"
+          :disabled="store.transpose <= -24"
+          title="Down one octave"
+          @click="store.setTranspose(store.transpose - 12)"
+        >−</button>
+        <button
+          class="px-2 py-0.5 font-mono text-[0.65rem] font-semibold text-green-700 rounded hover:bg-green-200 transition-colors min-w-[44px] text-center leading-none"
+          title="Click to reset transpose"
+          @click="store.setTranspose(0)"
+        >
+          {{ transposeHeaderLabel }}
+        </button>
+        <button
+          class="w-6 h-6 flex items-center justify-center rounded font-mono text-sm text-green-700 hover:bg-green-200 transition-colors leading-none disabled:opacity-30"
+          :disabled="store.transpose >= 24"
+          title="Up one octave"
+          @click="store.setTranspose(store.transpose + 12)"
+        >+</button>
+      </div>
+
       <div class="flex items-center gap-3 shrink-0">
         <KaraokeScoreDisplay />
         <KaraokeLivePitchBadge />
@@ -118,8 +141,26 @@ onMounted(async () => {
 
 const noteCount = computed(() => store.noteEvents.length)
 
+const transposeHeaderLabel = computed(() => {
+  const t = store.transpose
+  if (t === 0) return '0 oct'
+  const octs = t / 12
+  return `${octs > 0 ? '+' : ''}${octs} oct`
+})
+
+const NOTE_NAMES_KARAOKE = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+function transposedNote(midi: number, semitones: number): string {
+  const shifted = Math.max(0, Math.min(127, midi + semitones))
+  return `${NOTE_NAMES_KARAOKE[shifted % 12]}${Math.floor(shifted / 12) - 1}`
+}
+
 const stats = computed(() => [
-  { label: 'Current', value: store.activeNote?.event.note ?? '—' },
+  {
+    label: 'Current',
+    value: store.activeNote
+      ? (store.transpose !== 0 ? transposedNote(store.activeNote.event.midi, store.transpose) : store.activeNote.event.note)
+      : '—',
+  },
   { label: 'Singing',  value: store.liveNoteName || '—', class: store.liveNoteName ? 'text-green-600' : 'text-ink' },
   {
     label: 'Score',
