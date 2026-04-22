@@ -1,82 +1,113 @@
 <template>
   <div class="min-h-screen flex flex-col bg-canvas relative">
-    <div class="fixed inset-0 pointer-events-none bg-[radial-gradient(ellipse_55%_45%_at_15%_15%,rgba(21,128,61,0.07)_0%,transparent_60%)] z-0" />
+
+    <!-- Atmospheric background -->
+    <div class="fixed inset-0 pointer-events-none z-0">
+      <div class="absolute top-[-15vh] right-[-10vw] w-[50vw] h-[50vw] rounded-full"
+           style="background: radial-gradient(circle, rgba(34,197,94,0.07) 0%, transparent 65%)" />
+      <div class="absolute bottom-[-10vh] left-[-8vw] w-[38vw] h-[38vw] rounded-full"
+           style="background: radial-gradient(circle, rgba(74,222,128,0.05) 0%, transparent 65%)" />
+      <div class="absolute inset-0 opacity-[0.02]"
+           style="background-image: linear-gradient(rgba(21,128,61,1) 1px, transparent 1px), linear-gradient(90deg, rgba(21,128,61,1) 1px, transparent 1px); background-size: 52px 52px;" />
+    </div>
 
     <!-- Header -->
-    <header class="sticky top-0 z-20 flex items-center gap-4 px-6 py-3.5 border-b border-green-200 bg-canvas/90 backdrop-blur-md">
-      <NuxtLink to="/" class="flex items-center gap-1.5 font-mono text-[0.72rem] text-ink-faint hover:text-green-700 transition-colors no-underline shrink-0">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="w-4 h-4"><path d="M10 12 L5 8 L10 4"/></svg>
-        Back
-      </NuxtLink>
-      <h1 class="font-display text-base font-bold tracking-tight text-ink m-0">Pitch Detection Test</h1>
-      <span class="font-mono text-[0.65rem] text-ink-faint">Sing an octave to verify the system</span>
+    <header class="sticky top-0 z-20 flex items-center gap-4 px-5 py-3 border-b border-green-200/80 bg-canvas/92 backdrop-blur-md">
+      <div class="flex items-center gap-3 shrink-0">
+        <NuxtLink to="/" class="flex items-center gap-1.5 font-mono text-[0.68rem] text-ink-faint hover:text-green-700 transition-colors no-underline group">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5">
+            <path d="M10 12 L5 8 L10 4"/>
+          </svg>
+          Back
+        </NuxtLink>
+        <div class="w-px h-4 bg-green-200" />
+        <div class="flex items-end gap-[2px]" style="height: 14px">
+          <span class="bar w-[2px] rounded-full bg-green-500" style="--base-h: 5px; animation-duration: 1.3s" />
+          <span class="bar w-[2px] rounded-full bg-green-500" style="--base-h: 10px; animation-duration: 1.05s; animation-delay: 0.12s" />
+          <span class="bar w-[2px] rounded-full bg-green-600" style="--base-h: 14px; animation-duration: 0.9s; animation-delay: 0.2s" />
+          <span class="bar w-[2px] rounded-full bg-green-500" style="--base-h: 9px; animation-duration: 1.15s; animation-delay: 0.08s" />
+          <span class="bar w-[2px] rounded-full bg-green-400" style="--base-h: 4px; animation-duration: 1.4s; animation-delay: 0.28s" />
+        </div>
+      </div>
+      <div class="flex-1 min-w-0 flex flex-col gap-0.5">
+        <h1 class="font-display text-[0.95rem] font-bold tracking-tight text-ink m-0 leading-tight">Pitch Detection Test</h1>
+        <span class="font-mono text-[0.6rem] text-ink-faint">Sing an octave to verify the system</span>
+      </div>
+      <div
+        class="font-mono text-[0.58rem] tracking-[0.1em] uppercase px-2.5 py-1 rounded-full border flex items-center gap-1.5 shrink-0 transition-colors"
+        :class="isMicActive ? 'border-green-400 bg-green-100 text-green-700' : 'border-green-200 bg-green-50 text-ink-faint'"
+      >
+        <span class="w-1.5 h-1.5 rounded-full transition-colors" :class="isMicActive ? 'bg-green-500 animate-pulse' : 'bg-green-300'" />
+        {{ isMicActive ? 'Listening' : 'Idle' }}
+      </div>
     </header>
 
     <main class="flex-1 flex flex-col items-center gap-6 px-4 py-8 relative z-10 max-w-3xl w-full mx-auto">
 
-      <!-- Mic toggle -->
-      <div class="flex flex-col items-center gap-3">
+      <!-- Mic toggle + RMS -->
+      <div class="w-full max-w-md flex flex-col items-center gap-4">
         <button
-          class="w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg"
+          class="w-14 h-14 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg active:scale-95"
           :class="isMicActive
             ? 'bg-red-500 hover:bg-red-600 text-white shadow-red-200'
             : 'bg-green-600 hover:bg-green-700 text-white shadow-green-200'"
           @click="toggle"
         >
-          <svg v-if="!isMicActive" viewBox="0 0 24 24" fill="currentColor" class="w-7 h-7">
+          <svg v-if="!isMicActive" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
             <path d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm7 11a1 1 0 0 1 1 1 8 8 0 0 1-7 7.94V23h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.06A8 8 0 0 1 4 13a1 1 0 0 1 2 0 6 6 0 0 0 12 0 1 1 0 0 1 1-1z"/>
           </svg>
-          <div v-else class="w-5 h-5 bg-white rounded-sm" />
+          <div v-else class="w-4 h-4 bg-white rounded-sm" />
         </button>
-        <span class="font-mono text-[0.7rem] text-ink-faint">{{ isMicActive ? 'Listening…' : 'Tap to start mic' }}</span>
-        <p v-if="error" class="font-mono text-[0.7rem] text-red-500">{{ error }}</p>
+        <span class="font-mono text-[0.65rem] text-ink-faint">{{ isMicActive ? 'Listening…' : 'Tap to start mic' }}</span>
+        <p v-if="error" class="font-mono text-[0.68rem] text-red-500 text-center">{{ error }}</p>
+
+        <!-- RMS meter -->
+        <div class="w-full flex flex-col gap-1.5">
+          <div class="flex justify-between font-mono text-[0.55rem] text-ink-faint">
+            <span>Input level</span>
+            <span>{{ isMicActive ? (rmsLevel * 100).toFixed(0) + '%' : '—' }}</span>
+          </div>
+          <div class="h-2 bg-green-100 border border-green-200 rounded-full overflow-hidden">
+            <div
+              class="h-full rounded-full transition-all duration-75"
+              :class="rmsLevel > 0.8 ? 'bg-red-400' : rmsLevel > 0.4 ? 'bg-yellow-400' : 'bg-green-500'"
+              :style="{ width: (rmsLevel * 100) + '%' }"
+            />
+          </div>
+        </div>
       </div>
 
-      <!-- RMS meter -->
-      <div class="w-full max-w-md flex flex-col gap-1">
-        <div class="flex justify-between font-mono text-[0.58rem] text-ink-faint">
-          <span>Input level</span>
-          <span>{{ isMicActive ? (rmsLevel * 100).toFixed(0) + '%' : '—' }}</span>
-        </div>
-        <div class="h-2 bg-green-100 border border-green-200 rounded-full overflow-hidden">
-          <div
-            class="h-full rounded-full transition-all duration-75"
-            :class="rmsLevel > 0.8 ? 'bg-red-400' : rmsLevel > 0.4 ? 'bg-yellow-400' : 'bg-green-500'"
-            :style="{ width: (rmsLevel * 100) + '%' }"
-          />
-        </div>
-      </div>
+      <!-- Main pitch display -->
+      <div class="w-full max-w-md bg-green-50 border border-green-200 rounded-2xl p-6 flex flex-col gap-5">
 
-      <!-- Main detection display -->
-      <div class="w-full max-w-md bg-green-50 border border-green-200 rounded-2xl p-6 flex flex-col gap-4">
-
-        <!-- Big note name -->
-        <div class="text-center flex flex-col gap-1">
+        <!-- Big note -->
+        <div class="text-center flex flex-col gap-2">
           <div
-            class="font-display text-7xl font-extrabold tracking-tight transition-all duration-100"
+            class="font-display font-extrabold tracking-[-0.04em] transition-all duration-100 leading-none"
+            style="font-size: clamp(5rem, 20vw, 8rem)"
             :class="committedNote ? 'text-green-700' : 'text-green-200'"
           >
             {{ committedNote || '—' }}
           </div>
-          <div class="flex justify-center gap-4 font-mono text-[0.65rem] text-ink-faint">
-            <span>MIDI {{ committedMidi || '—' }}</span>
-            <span>·</span>
+          <div class="flex justify-center gap-3 font-mono text-[0.62rem] text-ink-faint flex-wrap">
+            <span>MIDI&thinsp;{{ committedMidi || '—' }}</span>
+            <span class="text-green-200">·</span>
             <span>{{ rawHz > 0 ? rawHz.toFixed(1) + ' Hz' : '— Hz' }}</span>
-            <span>·</span>
+            <span class="text-green-200">·</span>
             <span>{{ rawHz > 0 ? hzToMidi(rawHz) + ' raw' : '— raw' }}</span>
           </div>
         </div>
 
-        <!-- Smoothing buffer visualiser -->
-        <div class="flex flex-col gap-1.5">
-          <span class="font-mono text-[0.58rem] text-ink-faint uppercase tracking-[0.07em]">
-            Smoothing buffer (last {{ BUFFER_SIZE }} frames, need {{ COMMIT_MAJORITY }} to commit)
+        <!-- Smoothing buffer -->
+        <div class="flex flex-col gap-2">
+          <span class="font-mono text-[0.55rem] text-ink-faint uppercase tracking-[0.1em]">
+            Smoothing buffer ({{ BUFFER_SIZE }} frames · need {{ COMMIT_MAJORITY }} to commit)
           </span>
           <div class="flex gap-1">
             <div
               v-for="(slot, i) in bufferDisplay"
               :key="i"
-              class="flex-1 h-8 rounded-md flex items-center justify-center font-mono text-[0.58rem] font-bold transition-all duration-100"
+              class="flex-1 h-9 rounded-lg flex items-center justify-center font-mono text-[0.55rem] font-bold transition-all duration-100"
               :class="slot
                 ? slot === committedNote
                   ? 'bg-green-600 text-white'
@@ -89,9 +120,9 @@
         </div>
       </div>
 
-      <!-- Chromatic keyboard — two octaves centred on detected note's octave -->
+      <!-- Chromatic keyboard -->
       <div class="w-full max-w-2xl flex flex-col gap-2">
-        <span class="font-mono text-[0.65rem] text-ink-faint uppercase tracking-[0.07em]">
+        <span class="font-mono text-[0.6rem] text-ink-faint uppercase tracking-[0.08em]">
           Chromatic keyboard — {{ octaveLabel }}
         </span>
         <div class="relative h-24 flex gap-px select-none">
@@ -114,7 +145,7 @@
           >
             <span
               v-if="!key.isBlack"
-              class="font-mono text-[0.5rem] leading-none"
+              class="font-mono text-[0.48rem] leading-none"
               :class="key.midi === committedMidi && isMicActive ? 'text-ink font-bold' : 'text-ink-faint'"
             >
               {{ key.label }}
@@ -126,19 +157,19 @@
       <!-- Note history log -->
       <div class="w-full max-w-md flex flex-col gap-2">
         <div class="flex items-center justify-between">
-          <span class="font-mono text-[0.65rem] text-ink-faint uppercase tracking-[0.07em]">Note log</span>
+          <span class="font-mono text-[0.6rem] text-ink-faint uppercase tracking-[0.08em]">Note log</span>
           <button
-            class="font-mono text-[0.6rem] text-green-600 hover:text-green-800 transition-colors"
+            class="font-mono text-[0.58rem] text-green-600 hover:text-green-800 transition-colors"
             @click="noteLog.length = 0"
           >clear</button>
         </div>
-        <div class="bg-green-50 border border-green-200 rounded-xl p-3 min-h-[60px] flex flex-wrap gap-1.5 content-start">
+        <div class="bg-green-50 border border-green-200 rounded-xl p-3 min-h-[56px] flex flex-wrap gap-1.5 content-start">
           <span
             v-for="(entry, i) in noteLog"
             :key="i"
-            class="font-mono text-[0.65rem] px-1.5 py-0.5 rounded bg-green-200 text-green-800"
+            class="font-mono text-[0.62rem] px-1.5 py-0.5 rounded-md bg-green-200 text-green-800"
           >{{ entry }}</span>
-          <span v-if="!noteLog.length" class="font-mono text-[0.65rem] text-ink-faint">Sing notes to see them appear here…</span>
+          <span v-if="!noteLog.length" class="font-mono text-[0.62rem] text-ink-faint">Sing notes to see them appear here…</span>
         </div>
       </div>
 
@@ -155,13 +186,12 @@ const COMMIT_MAJORITY = 5
 const store = useKaraokeStore()
 const { toggle, error, rawHz, rmsLevel } = useMicRecorder()
 
-const isMicActive  = computed(() => store.isMicActive)
+const isMicActive   = computed(() => store.isMicActive)
 const committedNote = computed(() => store.liveNoteName)
 const committedMidi = computed(() => store.liveMidi)
 
-// ── Smoothing buffer visualiser ──────────────────────────────────────────────
-// Mirror the buffer state by watching committed note changes
-const bufferDisplay = ref<(string | null)[]>(Array(BUFFER_SIZE).fill(null))
+// Smoothing buffer visualiser
+const bufferDisplay   = ref<(string | null)[]>(Array(BUFFER_SIZE).fill(null))
 const internalHistory = ref<string[]>([])
 
 watch(() => store.liveF0, (hz) => {
@@ -186,7 +216,7 @@ watch(isMicActive, (active) => {
   }
 })
 
-// ── Note history log ─────────────────────────────────────────────────────────
+// Note history log
 const noteLog = reactive<string[]>([])
 let lastLogged = ''
 
@@ -198,13 +228,13 @@ watch(committedNote, (note) => {
   }
 })
 
-// ── Chromatic keyboard — 2 octaves centred on detected note ──────────────────
+// Chromatic keyboard
 const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']
 const BLACK_KEYS = new Set([1,3,6,8,10])
 
 const centreOctave = computed(() => {
   if (committedMidi.value > 0) return Math.floor(committedMidi.value / 12) - 1
-  return 3  // default C3–B4
+  return 3
 })
 
 const octaveLabel = computed(() =>
@@ -212,7 +242,7 @@ const octaveLabel = computed(() =>
 )
 
 const keys = computed(() => {
-  const startMidi = (centreOctave.value + 1) * 12   // C of centreOctave
+  const startMidi = (centreOctave.value + 1) * 12
   const result = []
   for (let midi = startMidi; midi < startMidi + 24; midi++) {
     const semitone = midi % 12
@@ -224,3 +254,17 @@ const keys = computed(() => {
   return result
 })
 </script>
+
+<style scoped>
+.bar {
+  display: inline-block;
+  height: var(--base-h, 10px);
+  transform-origin: bottom;
+  animation: barBounce var(--dur, 1s) ease-in-out infinite alternate;
+}
+
+@keyframes barBounce {
+  0%   { transform: scaleY(0.2); }
+  100% { transform: scaleY(1); }
+}
+</style>
