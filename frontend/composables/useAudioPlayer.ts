@@ -35,6 +35,7 @@ export function useAudioPlayer() {
       store.setPlaying(false)
       stopTimeSync()
       store.setCurrentTime(0)
+      store.setSongFinished(true)
     })
     el.addEventListener('canplaythrough', () => { isReady.value = true })
     el.addEventListener('loadstart',      () => { isReady.value = false })

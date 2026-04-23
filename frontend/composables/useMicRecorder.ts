@@ -94,7 +94,8 @@ export function useMicRecorder() {
             const active = store.activeNote
             if (store.isPlaying && active && committedMidi !== 0) {
               const expectedMidi = active.event.midi + store.transpose
-              store.recordPitchSample(Math.abs(expectedMidi - committedMidi) <= 1)
+              const diff = Math.abs(expectedMidi - committedMidi)
+              store.recordPitchSample(diff <= 1, diff === 0)
             }
           } else {
             rawHz.value = 0

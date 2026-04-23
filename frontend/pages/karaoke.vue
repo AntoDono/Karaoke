@@ -130,6 +130,9 @@
       </section>
     </main>
   </div>
+
+  <!-- End-of-song results overlay -->
+  <KaraokeSongResults />
 </template>
 
 <script setup lang="ts">

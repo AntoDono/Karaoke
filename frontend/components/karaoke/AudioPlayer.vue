@@ -47,12 +47,21 @@
 
 <script setup lang="ts">
 const store = useKaraokeStore()
-const { attach, toggle, seekByFraction, isReady } = useAudioPlayer()
+const { attach, toggle, seekByFraction, seek, play, isReady } = useAudioPlayer()
 
 const audioElRef    = ref<HTMLAudioElement | null>(null)
 const hoverFraction = ref<number | null>(null)
 
 onMounted(() => { if (audioElRef.value) attach(audioElRef.value) })
+
+// Restart song when SongResults requests it
+watch(() => store.pendingRestart, (v) => {
+  if (v) {
+    seek(0)
+    play()
+    store.setPendingRestart(false)
+  }
+})
 
 const progressPct = computed(() =>
   store.duration > 0 ? (store.currentTime / store.duration) * 100 : 0

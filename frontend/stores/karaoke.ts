@@ -34,9 +34,28 @@ export const useKaraokeStore = defineStore('karaoke', () => {
   const vocalRange = ref<VocalRange | null>(null)
 
   // ── Score ────────────────────────────────────────────────────────────────────
-  const score = ref(0)             // 0–100
+  const score = ref(0)             // 0–100 accuracy
   const scoredFrames = ref(0)
   const correctFrames = ref(0)
+  const exactFrames = ref(0)       // frames where pitch was exactly right (not just ±1)
+
+  // ── Combo ─────────────────────────────────────────────────────────────────────
+  const combo = ref(0)             // current streak of correct frames
+  const maxCombo = ref(0)          // peak combo reached this session
+  const consecutiveWrong = ref(0)  // wrong frames since last correct; resets on correct
+  const points = ref(0)            // accumulated combo-weighted points
+
+  // Multiplier tiers: ×1 below 10, ×2 at 10, ×3 at 25, ×4 at 50
+  const comboMultiplier = computed(() => {
+    if (combo.value >= 50) return 4
+    if (combo.value >= 25) return 3
+    if (combo.value >= 10) return 2
+    return 1
+  })
+
+  // ── Song state ───────────────────────────────────────────────────────────────
+  const songFinished = ref(false)    // true when audio 'ended' fires naturally
+  const pendingRestart = ref(false)  // signals AudioPlayer to seek(0) + play()
 
   // ── Derived: active note at playhead ────────────────────────────────────────
   const activeNote = computed<ActiveNote | null>(() => {
@@ -104,12 +123,48 @@ export const useKaraokeStore = defineStore('karaoke', () => {
     vocalRange.value = range
   }
 
-  function recordPitchSample(isCorrect: boolean) {
+  function recordPitchSample(isCorrect: boolean, isExact = false) {
     scoredFrames.value++
-    if (isCorrect) correctFrames.value++
+    if (isCorrect) {
+      correctFrames.value++
+      if (isExact) exactFrames.value++
+      consecutiveWrong.value = 0
+      combo.value++
+      if (combo.value > maxCombo.value) maxCombo.value = combo.value
+      // Exact hits award double points to reward precision
+      points.value += isExact ? comboMultiplier.value * 2 : comboMultiplier.value
+    } else {
+      consecutiveWrong.value++
+      // Combo breaks only after 3 consecutive wrong frames
+      if (consecutiveWrong.value >= 3) {
+        combo.value = 0
+        consecutiveWrong.value = 0
+      }
+    }
     score.value = scoredFrames.value > 0
       ? Math.round((correctFrames.value / scoredFrames.value) * 100)
       : 0
+  }
+
+  function setSongFinished(v: boolean) {
+    songFinished.value = v
+  }
+
+  function setPendingRestart(v: boolean) {
+    pendingRestart.value = v
+  }
+
+  function resetScore() {
+    score.value = 0
+    scoredFrames.value = 0
+    correctFrames.value = 0
+    exactFrames.value = 0
+    combo.value = 0
+    maxCombo.value = 0
+    consecutiveWrong.value = 0
+    points.value = 0
+    songFinished.value = false
+    pendingRestart.value = false
   }
 
   function resetSession() {
@@ -127,6 +182,13 @@ export const useKaraokeStore = defineStore('karaoke', () => {
     score.value = 0
     scoredFrames.value = 0
     correctFrames.value = 0
+    exactFrames.value = 0
+    combo.value = 0
+    maxCombo.value = 0
+    consecutiveWrong.value = 0
+    points.value = 0
+    songFinished.value = false
+    pendingRestart.value = false
     transpose.value = 0
     vocalRange.value = null
     if (audioUrl.value) {
@@ -144,7 +206,9 @@ export const useKaraokeStore = defineStore('karaoke', () => {
     audioUrl, vocalsUrl, audioFile,
     currentTime, isPlaying,
     liveF0, liveMidi, liveNoteName, isMicActive,
-    score, scoredFrames, correctFrames,
+    score, scoredFrames, correctFrames, exactFrames,
+    combo, maxCombo, consecutiveWrong, points, comboMultiplier,
+    songFinished, pendingRestart,
     transpose, vocalRange,
     // computed
     activeNote,
@@ -153,6 +217,7 @@ export const useKaraokeStore = defineStore('karaoke', () => {
     setAudioFile, setCurrentTime, setPlaying,
     setLivePitch, setMicActive, recordPitchSample,
     setTranspose, setVocalRange,
+    setSongFinished, setPendingRestart, resetScore,
     resetSession,
   }
 })

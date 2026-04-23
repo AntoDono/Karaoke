@@ -261,10 +261,10 @@ function drawPianoKeys(rowH: number, midiMin: number, midiMax: number, transpose
 function drawToleranceBands(activeMidi: number, rowH: number, W: number) {
   if (!ctx) return
 
-  // Top edge of the note one semitone above (+1): bottom of that row
-  const yAbove = midiToY(activeMidi + 1, rowH) + rowH
-  // Bottom edge of the note one semitone below (-1): top of that row
-  const yBelow = midiToY(activeMidi - 1, rowH)
+  // Top edge of the +1 semitone row (outer boundary of tolerance zone above)
+  const yAbove = midiToY(activeMidi + 1, rowH)
+  // Bottom edge of the -1 semitone row (outer boundary of tolerance zone below)
+  const yBelow = midiToY(activeMidi - 1, rowH) + rowH
 
   ctx.save()
   ctx.strokeStyle = 'rgba(251, 146, 60, 0.85)'  // orange-400 @ 85%
@@ -319,14 +319,16 @@ function drawPitchArrow(liveMidi: number, rowH: number) {
   const tailX  = PIANO_WIDTH - 22   // back of the arrow body
   const halfH  = Math.max(5, Math.min(10, rowH * 0.55))  // scales with row height
 
-  // Determine if singer is hitting the active note
-  const active     = store.activeNote
-  const isOnTarget = active && (active.event.midi + store.transpose === liveMidi)
-  const arrowColor = isOnTarget ? C.greenLime : '#facc15'  // green = correct, yellow = off
+  // Determine how close the singer is to the active note (0 = exact, 1 = ±1 semitone, Infinity = off)
+  const active = store.activeNote
+  const diff   = active ? Math.abs(active.event.midi + store.transpose - liveMidi) : Infinity
+  // Three color tiers: exact → bright green, near (±1) → muted green, off → yellow
+  const arrowColor = diff === 0 ? C.greenLime : diff <= 1 ? '#86efac' : '#facc15'
+  const glowInner  = diff === 0 ? 'rgba(74,222,128,0.35)' : diff <= 1 ? 'rgba(134,239,172,0.22)' : 'rgba(250,204,21,0.3)'
 
   // Glow halo behind the arrow
   const glow = ctx.createRadialGradient(PIANO_WIDTH, noteCentre, 0, PIANO_WIDTH, noteCentre, 24)
-  glow.addColorStop(0,   isOnTarget ? 'rgba(74,222,128,0.35)' : 'rgba(250,204,21,0.3)')
+  glow.addColorStop(0,   glowInner)
   glow.addColorStop(1,   'rgba(0,0,0,0)')
   ctx.fillStyle = glow
   ctx.fillRect(tailX - 4, noteCentre - 24, tipX - tailX + 28, 48)
@@ -346,7 +348,7 @@ function drawPitchArrow(liveMidi: number, rowH: number) {
   if (rowH >= 10) {
     const NOTE_NAMES_ARR = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']
     const name = `${NOTE_NAMES_ARR[liveMidi % 12]}${Math.floor(liveMidi / 12) - 1}`
-    ctx.fillStyle = isOnTarget ? C.ink : '#713f12'
+    ctx.fillStyle = diff === 0 ? C.ink : diff <= 1 ? '#166534' : '#713f12'
     ctx.font      = `700 ${Math.max(7, Math.min(9, rowH * 0.55)).toFixed(0)}px "IBM Plex Mono", monospace`
     ctx.textAlign = 'left'
     ctx.fillText(name, tailX + 2, noteCentre + 3)
