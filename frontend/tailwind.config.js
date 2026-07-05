@@ -1,61 +1,78 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
-    './pages/**/*.{vue,ts}',
-    './components/**/*.{vue,ts}',
-    './layouts/**/*.{vue,ts}',
-    './composables/**/*.{ts}',
-    './stores/**/*.{ts}',
+    './components/**/*.{vue,js,ts}',
+    './layouts/**/*.vue',
+    './pages/**/*.vue',
+    './app/**/*.vue',
+    './plugins/**/*.{js,ts}',
+    './composables/**/*.{js,ts}',
+    './app.vue',
   ],
   theme: {
     extend: {
-      // Custom colors on top of Tailwind's built-in green scale.
-      // Tailwind green-400..700 already matches our palette exactly:
-      //   green-700 = #15803d  (deep botanical)
-      //   green-600 = #16a34a  (mid)
-      //   green-500 = #22c55e  (vivid)
-      //   green-400 = #4ade80  (lime)
-      //   green-300 = #86efac  (border-strong)
-      //   green-200 = #bbf7d0  (pale)
-      //   green-100 = #dcfce7  (highlight bg)
-      //   green-50  = #f0fdf4  (card bg)
       colors: {
-        // Page background — faintest green tint
-        canvas: '#FAFFF9',
-        // Ink / text
+        rice: {
+          50:  '#FDFAF0',
+          100: '#FAF6E7',
+          200: '#F4EDD1',
+          300: '#EBE0B0',
+          400: '#E1D18F',
+        },
+        cream: {
+          50:  '#FFFBEE',
+          100: '#FFF4D6',
+          200: '#FCE9B2',
+          300: '#F5D888',
+          400: '#EAC257',
+        },
+        moss: {
+          50:  '#EEF6EF',
+          100: '#D7EBDA',
+          200: '#A7D4B0',
+          300: '#6FB57F',
+          400: '#3F9556',
+          500: '#2D8F52',
+          600: '#207040',
+          700: '#155230',
+          800: '#0F3D26',
+          900: '#0A2A1A',
+        },
         ink: {
-          DEFAULT: '#0a0f0a',
-          muted:   '#374B3A',
-          faint:   '#6B8F72',
+          DEFAULT: '#2A2118',
+          soft:    '#4A3E30',
+          faint:   '#8B7B65',
         },
       },
       fontFamily: {
-        display: ['Syne', 'sans-serif'],
-        mono:    ['IBM Plex Mono', 'monospace'],
+        display: ['Fraunces', 'ui-serif', 'Georgia', 'serif'],
+        sans:    ['"DM Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono:    ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+      },
+      letterSpacing: {
+        tightest: '-0.06em',
+      },
+      boxShadow: {
+        soft:    '0 4px 24px -6px rgba(15, 61, 38, 0.10)',
+        card:    '0 12px 40px -12px rgba(15, 61, 38, 0.18)',
+        emboss:  'inset 0 1px 0 rgba(255,255,255,0.5), 0 1px 2px rgba(15, 61, 38, 0.08)',
       },
       animation: {
-        'pulse-border': 'pulse-border 1.8s ease-in-out infinite',
-        'fade-up':      'fadeUp 0.4s ease forwards',
-        'ring-pulse':   'ring-pulse 1.6s ease-out infinite',
-        'dot-pulse':    'dotPulse 1s ease-in-out infinite',
-        'spin-slow':    'spin 0.8s linear infinite',
+        'rise': 'rise 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both',
+        'grain': 'grain 8s steps(8) infinite',
       },
       keyframes: {
-        'pulse-border': {
-          '0%, 100%': { borderColor: '#22c55e', opacity: '0.6' },
-          '50%':       { borderColor: '#4ade80', opacity: '1' },
+        rise: {
+          '0%':   { opacity: '0', transform: 'translateY(14px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
-        fadeUp: {
-          from: { opacity: '0', transform: 'translateY(12px)' },
-          to:   { opacity: '1', transform: 'translateY(0)' },
-        },
-        'ring-pulse': {
-          '0%':   { opacity: '0.8', transform: 'scale(1)' },
-          '100%': { opacity: '0',   transform: 'scale(1.4)' },
-        },
-        dotPulse: {
-          '0%, 100%': { transform: 'scale(1)',   opacity: '1' },
-          '50%':       { transform: 'scale(1.5)', opacity: '0.6' },
+        grain: {
+          '0%,100%': { transform: 'translate(0,0)' },
+          '10%':     { transform: 'translate(-3%,-2%)' },
+          '30%':     { transform: 'translate(3%,-4%)' },
+          '50%':     { transform: 'translate(-2%,5%)' },
+          '70%':     { transform: 'translate(4%,3%)' },
+          '90%':     { transform: 'translate(-4%,1%)' },
         },
       },
     },

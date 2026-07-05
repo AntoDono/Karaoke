@@ -16,6 +16,9 @@ dependencies = [
     "torch",
     "torchaudio",
     "torchfcpe",
+    "google-genai>=1.0.0",
+    "pydantic-settings>=2.5.0",
+    "peewee>=3.17.0",
 ]
 
 [tool.uv]

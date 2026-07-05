@@ -1,5 +1,6 @@
 from enum import Enum
 from typing import Optional
+
 from pydantic import BaseModel
 
 
@@ -13,28 +14,46 @@ class JobStatus(str, Enum):
     failed = "failed"
 
 
+class LyricsStatus(str, Enum):
+    pending = "pending"
+    found = "found"
+    not_found = "not_found"
+    error = "error"
+
+
 class NoteEvent(BaseModel):
-    note: str        # e.g. "C4", "F#3"
-    midi: int        # MIDI note number, e.g. 60
-    start: float     # onset in seconds
-    end: float       # offset in seconds
+    note: str          # e.g. "C4", "F#3"
+    midi: int          # MIDI note number, e.g. 60
+    start: float       # onset in seconds
+    end: float         # offset in seconds
     confidence: float  # mean voiced confidence over the segment [0–1]
 
 
 class AnalysisResult(BaseModel):
-    duration: float          # total audio duration in seconds
+    duration: float
     sample_rate: int
     notes: list[NoteEvent]
-    device: str              # "cuda" | "mps" | "cpu"
-    vocals_url: Optional[str] = None  # e.g. /api/jobs/{id}/vocals
+    device: str
+    vocals_url: Optional[str] = None
+
+
+class SongMeta(BaseModel):
+    title: str
+    artist: str
 
 
 class JobResponse(BaseModel):
     job_id: str
     status: JobStatus
-    progress: Optional[str] = None   # human-readable stage description
+    progress: Optional[str] = None
     result: Optional[AnalysisResult] = None
     error: Optional[str] = None
+
+    # Song metadata + lyrics
+    title: Optional[str] = None
+    artist: Optional[str] = None
+    lyrics: Optional[str] = None
+    lyrics_status: LyricsStatus = LyricsStatus.pending
 
 
 class AnalyzeResponse(BaseModel):

@@ -11,10 +11,14 @@ from models.schemas import NoteEvent
 
 
 # Minimum duration for a note event to be included (filters out transient pops)
-MIN_NOTE_DURATION_SEC = 0.25
+MIN_NOTE_DURATION_SEC = 0.20
 
 # Same-note events separated by less than this are merged into one long note
-MERGE_GAP_SEC = 0.25
+MERGE_GAP_SEC = 0.38
+
+# Adjacent notes within this many semitones and gap are treated as one phrase
+SEMITONE_MERGE_GAP_SEC = 0.14
+SEMITONE_MERGE_MAX = 1
 
 # Isolated blip filter: a note shorter than this whose neighbours are both
 # longer (by BLIP_RATIO x) and different pitches is almost certainly an artifact
@@ -87,6 +91,7 @@ def segment_notes(
         seg_start = i
 
     merged = _merge_gaps(sorted(events, key=lambda e: e.start))
+    merged = _merge_semitone_slides(merged)
     return _drop_blips(merged)
 
 
@@ -114,6 +119,39 @@ def _merge_gaps(events: list[NoteEvent]) -> list[NoteEvent]:
         else:
             merged.append(cur)
 
+    return merged
+
+
+def _merge_semitone_slides(events: list[NoteEvent]) -> list[NoteEvent]:
+    """
+    Merge short pitch slides / vibrato wobble into longer sustained notes.
+
+    If two neighbours are within ±1 semitone and the gap is tiny, keep the
+    longer pitch and extend the bar — this is what makes reference vocals
+  look connected in commercial karaoke UIs.
+    """
+    if len(events) < 2:
+        return events
+
+    merged: list[NoteEvent] = [events[0]]
+    for cur in events[1:]:
+        prev = merged[-1]
+        gap = cur.start - prev.end
+        if (
+            gap <= SEMITONE_MERGE_GAP_SEC
+            and abs(cur.midi - prev.midi) <= SEMITONE_MERGE_MAX
+        ):
+            # Keep the pitch of the longer segment; extend through the gap.
+            keep = prev if (prev.end - prev.start) >= (cur.end - cur.start) else cur
+            merged[-1] = NoteEvent(
+                note=keep.note,
+                midi=keep.midi,
+                start=prev.start,
+                end=cur.end,
+                confidence=round(max(prev.confidence, cur.confidence), 4),
+            )
+        else:
+            merged.append(cur)
     return merged
 
 

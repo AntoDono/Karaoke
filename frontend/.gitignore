@@ -5,6 +5,7 @@
 .nitro
 .cache
 dist
+backend/vocal_isolated/*
 
 # Node dependencies
 node_modules

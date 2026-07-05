@@ -1,10 +1,3 @@
-"""
-In-memory job store shared across API routes.
-
-Thread-safe for single-worker uvicorn use. For multi-worker deployments,
-replace with Redis or a database.
-"""
-
 import threading
 from typing import Any
 
@@ -12,9 +5,19 @@ _lock = threading.Lock()
 _jobs: dict[str, dict[str, Any]] = {}
 
 
-def create_job(job_id: str) -> None:
+def create_job(job_id: str, **initial: Any) -> None:
     with _lock:
-        _jobs[job_id] = {"status": "queued", "progress": "Queued", "result": None, "error": None}
+        _jobs[job_id] = {
+            "status": "queued",
+            "progress": "Queued",
+            "result": None,
+            "error": None,
+            "title": None,
+            "artist": None,
+            "lyrics": None,
+            "lyrics_status": "pending",
+            **initial,
+        }
 
 
 def update_job(job_id: str, **kwargs: Any) -> None:

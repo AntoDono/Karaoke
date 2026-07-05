@@ -20,7 +20,11 @@ log = logging.getLogger("karaoke.separator")
 VOCALS_DIR = Path(__file__).resolve().parents[1] / "vocal_isolated"
 
 
-def separate_vocals(audio_path: Path, device: torch.device) -> tuple[np.ndarray, int, Path]:
+def separate_vocals(
+    audio_path: Path,
+    device: torch.device,
+    out_path: Path | None = None,
+) -> tuple[np.ndarray, int, Path]:
     """
     Run Demucs source separation on the given audio file and return
     the isolated vocal stem as a mono float32 numpy array.
@@ -40,9 +44,18 @@ def separate_vocals(audio_path: Path, device: torch.device) -> tuple[np.ndarray,
     model.to(device)
     model.eval()
 
-    # ── Load audio with soundfile (no torchcodec needed) ─────────────────────
-    audio_np, sr = sf.read(str(audio_path), always_2d=True, dtype="float32")
-    waveform = torch.from_numpy(audio_np.T)  # (C, T)
+    # ── Load audio ───────────────────────────────────────────────────────────
+    # soundfile handles wav/flac/ogg natively; for mp3/mp4/m4a/aac we fall
+    # back to librosa.load, which delegates to `audioread` (ffmpeg).
+    try:
+        audio_np, sr = sf.read(str(audio_path), always_2d=True, dtype="float32")
+        audio_np = audio_np.T  # (C, T)
+    except Exception as e:
+        log.info("soundfile couldn't decode (%s) — falling back to librosa/ffmpeg", e)
+        audio_np, sr = librosa.load(str(audio_path), sr=None, mono=False)
+        if audio_np.ndim == 1:
+            audio_np = audio_np[np.newaxis, :]  # (1, T)
+    waveform = torch.from_numpy(audio_np.astype(np.float32))
     log.info("Loaded audio — %d ch, %d Hz, %.1fs",
              waveform.shape[0], sr, waveform.shape[1] / sr)
 
@@ -73,12 +86,13 @@ def separate_vocals(audio_path: Path, device: torch.device) -> tuple[np.ndarray,
 
     vocals_mono = vocals.mean(dim=0).cpu().numpy().astype(np.float32)
 
-    # Save isolated vocal stem to backend/vocal_isolated/<job_id>.wav
-    VOCALS_DIR.mkdir(exist_ok=True)
-    job_id = audio_path.parent.name.removeprefix("karaoke_")
-    vocals_path = VOCALS_DIR / f"{job_id}.wav"
-    sf.write(str(vocals_path), vocals_mono, sr, subtype="PCM_16")
-    log.info("Saved vocal stem → %s (%.1f MB)", vocals_path,
-             vocals_path.stat().st_size / 1_048_576)
+    # Save isolated vocal stem
+    if out_path is None:
+        job_id = audio_path.parent.name.removeprefix("karaoke_")
+        out_path = VOCALS_DIR / f"{job_id}.wav"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    sf.write(str(out_path), vocals_mono, sr, subtype="PCM_16")
+    log.info("Saved vocal stem → %s (%.1f MB)", out_path,
+             out_path.stat().st_size / 1_048_576)
 
-    return vocals_mono, sr, vocals_path
+    return vocals_mono, sr, out_path

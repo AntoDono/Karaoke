@@ -1,39 +1,83 @@
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ── CSS variables used by canvas drawing (JS can't access Tailwind classes) ─ */
 :root {
-  --green-deep:  #15803d;
-  --green-vivid: #22c55e;
-  --green-lime:  #4ade80;
-  --green-pale:  #bbf7d0;
-  --ink:         #0a0f0a;
-  --ink-faint:   #6B8F72;
-  --bg:          #FAFFF9;
-  --bg-card:     #F0FBF4;
-  --border:      #D1FAE5;
+  --rice: #FAF6E7;
+  --rice-warm: #FDFAF0;
+  --cream: #FFF4D6;
+  --moss-900: #0A2A1A;
+  --moss-800: #0F3D26;
+  --moss-500: #2D8F52;
+  --moss-300: #6FB57F;
+  --ink: #2A2118;
+  --ink-soft: #4A3E30;
+  --ink-faint: #8B7B65;
 }
 
-/* ── Base ──────────────────────────────────────────────────────────────────── */
-html, body {
-  background-color: #FAFFF9;
-  color: #0a0f0a;
-  font-family: 'Syne', sans-serif;
+html, body, #__nuxt {
+  background: var(--rice);
+  color: var(--ink);
+  font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: 'ss01', 'cv11';
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* ── Scrollbar ─────────────────────────────────────────────────────────────── */
-::-webkit-scrollbar       { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #F0FBF4; }
-::-webkit-scrollbar-thumb { background: #bbf7d0; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #16a34a; }
+/* ── Fraunces: variable, editorial serif for display ─────────────────── */
+.font-display {
+  font-family: 'Fraunces', ui-serif, Georgia, serif;
+  font-optical-sizing: auto;
+  font-variation-settings: 'SOFT' 30, 'WONK' 0;
+}
+.font-display-wonk {
+  font-family: 'Fraunces', ui-serif, Georgia, serif;
+  font-variation-settings: 'SOFT' 100, 'WONK' 1;
+}
 
-/* ── Focus ring ────────────────────────────────────────────────────────────── */
+/* ── Paper-grain overlay (used sparingly on hero sections) ───────────── */
+.paper-grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.16  0 0 0 0 0.13  0 0 0 0 0.09  0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.10'/></svg>");
+  mix-blend-mode: multiply;
+  opacity: 0.4;
+  z-index: 1;
+}
+
+/* ── Ruled paper: subtle horizontal staff lines ──────────────────────── */
+.ruled {
+  background-image: linear-gradient(to bottom,
+    transparent 0,
+    transparent calc(1.6rem - 1px),
+    rgba(15, 61, 38, 0.06) calc(1.6rem - 1px),
+    rgba(15, 61, 38, 0.06) 1.6rem);
+  background-size: 100% 1.6rem;
+}
+
+/* ── Marquee (used for tagline strip on landing) ─────────────────────── */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.marquee-track {
+  animation: marquee 40s linear infinite;
+}
+
+/* Custom scrollbar for lyric panel */
+.lyric-scroll::-webkit-scrollbar        { width: 6px; }
+.lyric-scroll::-webkit-scrollbar-track  { background: transparent; }
+.lyric-scroll::-webkit-scrollbar-thumb  { background: rgba(15,61,38,0.15); border-radius: 3px; }
+.lyric-scroll::-webkit-scrollbar-thumb:hover { background: rgba(15,61,38,0.25); }
+
+/* Selection */
+::selection { background: rgba(45, 143, 82, 0.25); color: var(--moss-900); }
+
+/* Focus */
 :focus-visible {
-  outline: 2px solid #22c55e;
+  outline: 2px solid var(--moss-500);
   outline-offset: 2px;
-  border-radius: 8px;
+  border-radius: 4px;
 }

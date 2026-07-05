@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
 from api.job_store import get_job
-from models.schemas import JobResponse, JobStatus, AnalysisResult
+from models.schemas import AnalysisResult, JobResponse, JobStatus, LyricsStatus
 
 router = APIRouter()
 
@@ -15,9 +15,7 @@ async def get_job_status(job_id: str) -> JobResponse:
     if job is None:
         raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found.")
 
-    result = None
-    if job["result"] is not None:
-        result = AnalysisResult(**job["result"])
+    result = AnalysisResult(**job["result"]) if job.get("result") else None
 
     return JobResponse(
         job_id=job_id,
@@ -25,6 +23,10 @@ async def get_job_status(job_id: str) -> JobResponse:
         progress=job.get("progress"),
         result=result,
         error=job.get("error"),
+        title=job.get("title"),
+        artist=job.get("artist"),
+        lyrics=job.get("lyrics"),
+        lyrics_status=LyricsStatus(job.get("lyrics_status", "pending")),
     )
 
 
